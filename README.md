@@ -115,6 +115,23 @@ List all reservations:
 curl http://localhost:3000/reservations
 ```
 
+Manual race-condition check:
+
+```bash
+curl -X POST http://localhost:3000/inventory/items \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"sku-1","totalStock":1}'
+
+seq 1 50 | xargs -P50 -I{} curl -s -o /tmp/reservation-{}.json -w "%{http_code}\n"   -X POST http://localhost:3000/reservations   -H 'Content-Type: application/json'   -d "{\"itemId\":\"sku-1\",\"userId\":\"user-{}\"}" | sort | uniq -c
+```
+
+Expected result:
+
+```text
+1 201
+49 409
+```
+
 ## Locking Strategy
 
 The app uses one async mutex per inventory item. All mutations for the same item are serialized:
